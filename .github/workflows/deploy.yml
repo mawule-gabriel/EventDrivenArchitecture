@@ -9,7 +9,7 @@ on:
       environment:
         description: 'Deployment environment (dev or prod)'
         required: true
-        default: 'prod'
+        default: 'dev'
 
 jobs:
   build-and-deploy:
