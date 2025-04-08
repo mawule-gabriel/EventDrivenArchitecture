@@ -24,10 +24,11 @@ jobs:
           java-version: '21'
           distribution: 'adopt'
 
-      # Build in the HelloWorldFunction subdirectory
       - name: Build with Maven
-        working-directory: ./HelloWorldFunction  # Point to the subdirectory
-        run: mvn clean package
+        working-directory: ./
+        run: |
+          cd HelloWorldFunction
+          mvn clean package
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
