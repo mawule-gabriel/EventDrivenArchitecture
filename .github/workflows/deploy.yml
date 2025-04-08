@@ -37,10 +37,13 @@ jobs:
           aws-region: eu-central-1
 
       - name: SAM Build
-        run: sam build
+        run: |
+          cd s3notification
+          sam build
 
       - name: SAM Deploy
         run: |
+          cd s3notification
           sam deploy \
             --stack-name s3-eda-${{ github.event.inputs.environment || 'dev' }} \
             --parameter-overrides \
