@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: S3 Event-Driven Architecture with Lambda & SNS
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - prod
+    Description: Deployment environment (dev or prod)
+  EmailAddress:
+    Type: String
+    Description: Email address to receive notifications
+Resources:
+  FileUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: file-upload-processor-${Environment}
+      CodeUri: FileUploadFunction
+      Handler: helloworld.App
+      Runtime: java21
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN:
+            Ref: NotificationTopic
+          ENVIRONMENT:
+            Ref: Environment
+      Policies:
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - NotificationTopic
+            - TopicName
+      - S3ReadPolicy:
+          BucketName:
+            Fn::Sub: s3-upload-bucket-${Environment}-${AWS::AccountId}
+    Metadata:
+      SamResourceId: FileUploadFunction
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub: file-upload-notifications-${Environment}
+      DisplayName:
+        Fn::Sub: File Upload Notifications - ${Environment}
+  EmailNotificationSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      Endpoint:
+        Ref: EmailAddress
+      TopicArn:
+        Ref: NotificationTopic
+  FileUploadPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: FileUploadFunction
+      Principal: s3.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:s3:::s3-upload-bucket-${Environment}-${AWS::AccountId}
+      SourceAccount:
+        Ref: AWS::AccountId
+  UploadBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: FileUploadPermission
+    Properties:
+      BucketName:
+        Fn::Sub: s3-upload-bucket-${Environment}-${AWS::AccountId}
+      NotificationConfiguration:
+        LambdaConfigurations:
+        - Event: s3:ObjectCreated:*
+          Function:
+            Fn::GetAtt:
+            - FileUploadFunction
+            - Arn
+Outputs:
+  UploadBucketName:
+    Description: Name of the S3 bucket for file uploads
+    Value:
+      Ref: UploadBucket
+  NotificationTopicArn:
+    Description: ARN of the SNS topic for notifications
+    Value:
+      Ref: NotificationTopic
+  LambdaFunctionName:
+    Description: Name of the Lambda function processing uploads
+    Value:
+      Ref: FileUploadFunction
