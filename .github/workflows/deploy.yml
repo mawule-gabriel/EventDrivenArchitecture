@@ -51,4 +51,5 @@ jobs:
               EmailAddress=${{ secrets.EMAIL_ADDRESS }} \
             --region eu-central-1 \
             --no-fail-on-empty-changeset \
+            --no-confirm-changeset \ 
             --capabilities CAPABILITY_IAM
