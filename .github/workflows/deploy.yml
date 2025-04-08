@@ -25,9 +25,8 @@ jobs:
           distribution: 'adopt'
 
       - name: Build with Maven
-        working-directory: ./
         run: |
-          cd HelloWorldFunction
+          cd s3notification/HelloWorldFunction
           mvn clean package
 
       - name: Configure AWS Credentials
