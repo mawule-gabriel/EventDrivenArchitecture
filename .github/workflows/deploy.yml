@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
   workflow_dispatch:
     inputs:
       environment:
@@ -29,7 +28,6 @@ jobs:
         run: |
           cd s3notification/HelloWorldFunction
           mvn clean package
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -41,29 +39,15 @@ jobs:
         run: |
           cd s3notification
           sam build
-
-      - name: Determine environment
-        id: determine-env
-        run: |
-          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
-            echo "env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
-          elif [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
-            echo "env=prod" >> $GITHUB_OUTPUT
-          else
-            echo "env=dev" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Deploy SAM application
+      - name: SAM Deploy
         run: |
           cd s3notification
-          email_subscription="${{ secrets.EMAIL_ADDRESS }}"
-          environment="${{ steps.determine-env.outputs.env }}"
-          
           sam deploy \
-            --stack-name s3-eda-$environment \
-            --template-file .aws-sam/build/template.yaml \
-            --parameter-overrides "Environment=$environment EmailAddress=$email_subscription" \
-            --capabilities CAPABILITY_IAM \
+            --stack-name s3-eda-${{ github.event.inputs.environment || 'dev' }} \
+            --parameter-overrides \
+              Environment=${{ github.event.inputs.environment || 'dev' }} \
+              EmailAddress=${{ secrets.EMAIL_ADDRESS }} \
+            --region eu-central-1 \
             --no-fail-on-empty-changeset \
             --no-confirm-changeset \
-            --region eu-central-1
+            --capabilities CAPABILITY_IAM
