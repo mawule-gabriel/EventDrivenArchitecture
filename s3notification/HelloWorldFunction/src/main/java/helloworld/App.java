@@ -24,6 +24,7 @@ public class App implements RequestHandler<S3Event, String> {
     private final S3Client s3Client;
     private final String snsTopicArn;
     private final String environment;
+    private final String email;
 
     public App() {
         // Initialize AWS clients
@@ -34,6 +35,7 @@ public class App implements RequestHandler<S3Event, String> {
         // Get environment variables
         this.snsTopicArn = System.getenv("SNS_TOPIC_ARN");
         this.environment = System.getenv("ENVIRONMENT");
+        this.email = System.getenv("Email");
     }
 
     @Override
@@ -42,6 +44,7 @@ public class App implements RequestHandler<S3Event, String> {
             // Log request information
             context.getLogger().log("Received S3 event: " + s3Event);
             context.getLogger().log("Environment: " + environment);
+            context.getLogger().log("TestEmail: " +  email);
 
             for (S3EventNotificationRecord record : s3Event.getRecords()) {
                 String bucketName = record.getS3().getBucket().getName();
@@ -49,6 +52,7 @@ public class App implements RequestHandler<S3Event, String> {
                 long objectSize = record.getS3().getObject().getSizeAsLong();
 
                 context.getLogger().log("Processing file: " + objectKey + " from bucket: " + bucketName);
+
 
                 // Get object metadata
                 GetObjectRequest getObjectRequest = GetObjectRequest.builder()

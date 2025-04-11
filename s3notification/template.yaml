@@ -32,6 +32,7 @@ Resources:
         Variables:
           SNS_TOPIC_ARN: !Ref NotificationTopic
           ENVIRONMENT: !Ref Environment
+          EMAIL: mawule@gmail.com
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt NotificationTopic.TopicName
@@ -71,7 +72,11 @@ Resources:
       BucketName: !Sub s3-upload-bucket-${Environment}-${AWS::AccountId}
       NotificationConfiguration:
         LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
+          - Event: s3:ObjectCreated:Post
+            Function: !GetAtt FileUploadFunction.Arn
+          - Event: s3:ObjectCreated:Put
+            Function: !GetAtt FileUploadFunction.Arn
+          - Event: s3:ObjectCreated:CompleteMultipartUpload
             Function: !GetAtt FileUploadFunction.Arn
 
 
@@ -88,3 +93,4 @@ Outputs:
   LambdaFunctionName:
     Description: Name of the Lambda function processing uploads
     Value: !Ref FileUploadFunction
+

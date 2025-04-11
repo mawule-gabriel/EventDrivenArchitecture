@@ -4,17 +4,24 @@ on:
   push:
     branches:
       - main
-      - dev
   workflow_dispatch:
     inputs:
       environment:
         description: 'Deployment environment (dev or prod)'
         required: true
         default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: eu-central-1
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -24,6 +31,19 @@ jobs:
         with:
           java-version: '21'
           distribution: 'adopt'
+
+      - name: Determine environment
+        id: determine-env
+        run: |
+          # If triggered by workflow_dispatch, use the input environment
+          # If triggered by push, default to dev
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            ENV="dev"  # Default to dev on push to main
+          fi
+          echo "env=$ENV" >> $GITHUB_OUTPUT
+          echo "Deploying to $ENV environment"
 
       - name: Build with Maven
         run: |
@@ -35,31 +55,27 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: SAM Build
         run: |
           cd s3notification
           sam build
 
-      - name: Determine environment
-        id: determine-env
+      - name: SAM Deploy
         run: |
-          if [[ ${{ github.ref }} == 'refs/heads/main' ]]; then
-          echo "env=prod" >> $GITHUB_OUTPUT
-          else
-          echo "env=dev" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Deploy SAM application
-        run: |
-          email_subscription="${{ secrets.EMAIL_ADDRESS }}"
-          environment="${{ steps.determine-env.outputs.env }}"
-          
+          cd s3notification
           sam deploy \
-            --stack-name s3-eda-$environment \
-            --parameter-overrides "Environment=$environment EmailAddress=$email_subscription" \
-            --capabilities CAPABILITY_IAM \
+            --stack-name s3-eda-${{ steps.determine-env.outputs.env }} \
+            --parameter-overrides \
+              Environment=${{ steps.determine-env.outputs.env }} \
+              EmailAddress=${{ secrets.EMAIL_ADDRESS }} \
+            --region eu-central-1 \
             --no-fail-on-empty-changeset \
             --no-confirm-changeset \
-            --region eu-central-1
+            --capabilities CAPABILITY_IAM
+
+      - name: Deployment Summary
+        run: |
+          echo "Successfully deployed to ${{ steps.determine-env.outputs.env }} environment"
+          echo "Stack name: s3-eda-${{ steps.determine-env.outputs.env }}"
