@@ -18,10 +18,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     env:
       AWS_REGION: eu-central-1
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
